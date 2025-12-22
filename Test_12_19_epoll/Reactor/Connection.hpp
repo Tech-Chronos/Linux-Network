@@ -56,6 +56,11 @@ public:
         _R = R;
     }
 
+    std::string& Inbuffer()
+    {
+        return _inbuffer;
+    }
+
     ~Connection()
     {}
 
@@ -64,6 +69,9 @@ private:
     int _event;
     int _type;
     InAddr _addr;
+
+    std::string _inbuffer;
+    std::string _outbuffer;
     
 public:
     handler_t send_func;

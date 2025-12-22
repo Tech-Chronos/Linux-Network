@@ -69,25 +69,25 @@ public:
         int sockfd = revent[i].data.fd;
         int ev = revent[i].events;
         LOG(DEBUG, "had event prepared! sockfd = %d", revent[i].data.fd);
-        if (ev == EPOLLERR)
+        if (ev & EPOLLERR)
             ev |= (EPOLLIN | EPOLLET);
 
-        if (ev == EPOLLHUP)
+        if (ev & EPOLLHUP)
             ev |= (EPOLLIN | EPOLLET);
 
-        if (ev == EPOLLIN)
+        if (ev & EPOLLIN)
         {
             if (WheatherExistCon(sockfd) && _connects[sockfd]->recv_func)
                 _connects[sockfd]->recv_func(_connects[sockfd]);
         }
-        else if (ev == EPOLLOUT)
+        else if (ev & EPOLLOUT)
         {
-            if (WheatherExistCon(sockfd) && _connects[sockfd]->recv_func)
+            if (WheatherExistCon(sockfd) && _connects[sockfd]->send_func)
                 _connects[sockfd]->send_func(_connects[sockfd]);
         }
         else
         {
-            if (WheatherExistCon(sockfd) && _connects[sockfd]->recv_func)
+            if (WheatherExistCon(sockfd) && _connects[sockfd]->except_func)
                 _connects[sockfd]->except_func(_connects[sockfd]);
         }
     }

@@ -1,5 +1,6 @@
 #include "Reactor.hpp"
 #include "Listener.hpp"
+#include "NetCal.hpp"
 
 
 int main(int argc, char *argv[])
@@ -16,13 +17,19 @@ int main(int argc, char *argv[])
     InAddr addr("0.0.0.0", port);
 
     int listen_sockfd = listener->Init();
+
+    Calculator cal;
+    IOService ios(std::bind(&Calculator::Calculate, &cal, std::placeholders::_1));
+
     
     std::unique_ptr<Reactor> R = std::make_unique<Reactor>();
-    R->SetOnConnect(std::bind(&Listener::Accept, Listener(port), std::placeholders::_1));
-    
-    R->SetOnNormalHandler(  std::bind(&HandlerIO::RecvMessage, HandlerIO(),std::placeholders::_1),
-                            std::bind(&HandlerIO::SendMessage, HandlerIO(),std::placeholders::_1),
-                            std::bind(&HandlerIO::HandleExcept, HandlerIO(),std::placeholders::_1)
+    R->SetOnConnect(std::bind(&Listener::Accept, *listener, std::placeholders::_1));
+
+    HandlerIO handler(std::bind(&IOService::Excute, &ios, std::placeholders::_1));
+
+    R->SetOnNormalHandler(  std::bind(&HandlerIO::RecvMessage, &handler,std::placeholders::_1),
+                            std::bind(&HandlerIO::SendMessage, &handler,std::placeholders::_1),
+                            std::bind(&HandlerIO::HandleExcept, &handler,std::placeholders::_1)
                          );
 
     R->AddConnection(listen_sockfd, EPOLLIN | EPOLLET, ListenConnection, addr);

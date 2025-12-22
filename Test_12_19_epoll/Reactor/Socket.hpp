@@ -39,9 +39,9 @@ public:
     void TcpServerCreateSocket(uint16_t port)
     {
         CreateSocket();
+        PortReuse();
         ServerBind(port);
         ServerListen();
-        PortReuse();
     }
 
     bool TcpClientCreateSocket(std::string &ip, uint16_t port)
