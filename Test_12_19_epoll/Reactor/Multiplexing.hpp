@@ -8,10 +8,21 @@ class Multiplex
 public:
     virtual bool AddEvent(int sockfd, int ev) = 0;
     virtual int Wait(epoll_event revent[], int maxevent, int timeout = -1) = 0;
+    virtual bool ModifyEvent(int sockfd, int ev) = 0;
+    virtual bool DelEvent(int sockfd) = 0;
 };
 
 class Epoller : public Multiplex
 {
+private:    
+    epoll_event EventHelper(int sockfd, int ev)
+    {
+        epoll_event event;
+        event.data.fd = sockfd;
+        event.events = ev;
+        
+        return event;
+    }
 public:
     Epoller()
     {
@@ -20,12 +31,22 @@ public:
 
     bool AddEvent(int sockfd, int ev) override
     {
-        epoll_event event;
-        event.data.fd = sockfd;
-        event.events = ev;
+        epoll_event event = EventHelper(sockfd, ev);
         int ret = epoll_ctl(_epfd, EPOLL_CTL_ADD, sockfd, &event);
-        if (ret == 0) return true;
-        else return false;
+        return ret == 0 ? true : false;
+    }
+
+    bool ModifyEvent(int sockfd, int ev) override
+    {
+        epoll_event event = EventHelper(sockfd, ev);
+        int ret = epoll_ctl(_epfd, EPOLL_CTL_MOD, sockfd, &event);
+        return ret == 0 ? true : false;
+    }
+
+    bool DelEvent(int sockfd) override
+    {
+        int ret = epoll_ctl(_epfd, EPOLL_CTL_DEL, sockfd, nullptr);
+        return ret == 0 ? true : false;
     }
 
     int Wait(epoll_event revent[], int maxevent, int timeout)

@@ -28,7 +28,7 @@ bool Decode(std::string &packagestream, std::string *full_message)
     auto pos = packagestream.find(sep);
     if (pos == std::string::npos)
     {
-        LOG(INFO, "incomplete header, waiting for more data");
+        //LOG(INFO, "incomplete header, waiting for more data");
         *full_message = std::string();
         return false;
     }

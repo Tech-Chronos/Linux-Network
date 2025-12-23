@@ -1,6 +1,7 @@
 #include "Reactor.hpp"
 #include "Listener.hpp"
 #include "NetCal.hpp"
+#include "HandlerConnection.hpp"
 
 
 int main(int argc, char *argv[])

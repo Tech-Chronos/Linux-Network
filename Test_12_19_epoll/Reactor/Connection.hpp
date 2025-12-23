@@ -26,6 +26,11 @@ public:
         except_func = excepter;
     }
 
+    void SetEvent(int event)
+    {
+        _event = event;
+    }
+
     int GetSockFD()
     {
         return _sockfd;
@@ -59,6 +64,11 @@ public:
     std::string& Inbuffer()
     {
         return _inbuffer;
+    }
+
+    std::string& Outbuffer()
+    {
+        return _outbuffer;
     }
 
     ~Connection()

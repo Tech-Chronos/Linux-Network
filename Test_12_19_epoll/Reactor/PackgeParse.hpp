@@ -23,9 +23,10 @@ public:
         {
             // 1. 接收完整一条消息
             std::string full_message;
+            LOG(INFO, "decode begin ...");
             if (!Decode(con->Inbuffer(), &full_message))
             {
-                continue;
+                break;
             }
 
             std::cout << "server decode: " << full_message << std::endl;
@@ -53,10 +54,12 @@ public:
 
             std::cout << "server echo: " << echo_message << std::endl;
 
-            // // 6. 发送数据给客户端
-            // //sock->SenMessage(echo_message);
+            // 6. 发送数据给客户端
+            con->Outbuffer() += echo_message;
         }
         
+        if (!con->Outbuffer().empty())
+            con->send_func(con);
     }
 
     ~IOService()

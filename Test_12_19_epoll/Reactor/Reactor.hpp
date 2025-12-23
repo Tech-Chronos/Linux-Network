@@ -1,12 +1,10 @@
 #pragma once
 #include "Connection.hpp"
 #include "Multiplexing.hpp"
-#include "HandlerConnection.hpp"
 
 #include <unordered_map>
 #include <iostream>
 #include <memory>
-
 
 class Listener;
 class Connection;
@@ -64,6 +62,18 @@ public:
         }
     }
 
+    void SetWriteReadEnable(Connection *con, bool writeable, bool readable)
+    {
+        if (WheatherExistCon(con->GetSockFD()))
+        {
+            int event = EPOLLET;
+            event |= ((writeable ? EPOLLOUT : 0) | (readable ? EPOLLIN : 0));
+            con->SetEvent(event);
+
+            _epoll_ptr->ModifyEvent(con->GetSockFD(), event);
+        }
+    }
+
     void LoopOnce(int i)
     {
         int sockfd = revent[i].data.fd;
@@ -77,8 +87,12 @@ public:
 
         if (ev & EPOLLIN)
         {
+            LOG(INFO, "EPOLLIN event");
             if (WheatherExistCon(sockfd) && _connects[sockfd]->recv_func)
+            {
+                LOG(DEBUG, "enter event");
                 _connects[sockfd]->recv_func(_connects[sockfd]);
+            }
         }
         else if (ev & EPOLLOUT)
         {
@@ -91,7 +105,7 @@ public:
                 _connects[sockfd]->except_func(_connects[sockfd]);
         }
     }
-    
+
     void Dispatch()
     {
         _isrunning = true;
@@ -103,6 +117,7 @@ public:
                 for (int i = 0; i < ret; ++i)
                 {
                     LoopOnce(i);
+                    PrintDebug();
                 }
             }
             else if (ret == 0)
@@ -119,22 +134,45 @@ public:
 
     bool WheatherExistCon(int sockfd)
     {
-        auto it = _connects.find(sockfd);
-        if (it == _connects.end())
-            return false;
+        // auto it = _connects.find(sockfd);
+        // if (it == _connects.end())
+        //     return false;
 
-        return true;
+        return _connects.find(sockfd) != _connects.end();
     }
 
     void SetOnConnect(handler_t OnConnect)
     {
         _OnConnect = OnConnect;
     }
+
     void SetOnNormalHandler(handler_t recver, handler_t sender, handler_t excepter)
     {
         _OnRecver = recver;
         _OnSender = sender;
         _OnExcepter = excepter;
+    }
+
+    void DeleSock(Connection *con)
+    {
+        // 1. 从内核中移除, 不让epoll管理
+        _epoll_ptr->DelEvent(con->GetSockFD());
+
+        // 2. 关闭文件描述符
+        close(con->GetSockFD());
+
+        // 3. 在reactor中移除
+        _connects.erase(con->GetSockFD());
+    }
+
+    void PrintDebug()
+    {
+        std::string fdlist;
+        for (auto &conn : _connects)
+        {
+            fdlist += std::to_string(conn.second->GetSockFD()) + " ";
+        }
+        LOG(DEBUG, "epoll管理的fd列表: %s\n", fdlist.c_str());
     }
 
     ~Reactor()
