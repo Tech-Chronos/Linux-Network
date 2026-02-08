@@ -1025,6 +1025,26 @@ void TimerWheel::CancelTimerTask(uint64_t timeid)
     _loop->RunInLoop(std::bind(&TimerWheel::CancelTimerInLoop, this, timeid));
 }
 
+class Any
+{
+public:
+    template <class T>
+    class Holder
+    {
+    public:
+        virtual ~Holder();
+    };
+
+    template <class T>
+    class PlaceHolder : public Holder
+    {
+    public:
+
+    private:
+        
+    };
+};
+
 class Connection;
 using PtrConnection = std::shared_ptr<Connection>;
 
@@ -1061,7 +1081,7 @@ private:
         _in_buffer.WriteAndPush(buff, ret);
         if (_in_buffer.GetReadableNum() > 0)
         {
-            // 防止在message_cb中销毁这个Connection指针，造成对也指针的访问，因此要用
+            // 防止在message_cb中销毁这个Connection
             if (_message_cb)
                 _message_cb(shared_from_this(), &_in_buffer);
         }
@@ -1160,9 +1180,45 @@ private:
             _conn_cb(shared_from_this());
     }
 
-    void ReleaseInLoop()
+    void SendInLoop(Buffer& buf)
     {
-        
+        if (_status == DISCONNECTED) return;
+        _out_buffer.WriteBufferAndPush(buf);
+        if (!_channel.WriteAble())
+            _channel.EnableWrite();
+    }
+
+    void ShutDownInLoop()
+    {
+        _status = DISCONNECTING;
+        if (_in_buffer.GetReadableNum() > 0)
+        {
+            if (_message_cb)
+                _message_cb(shared_from_this(), &_in_buffer);
+        }
+        if (_out_buffer.GetReadableNum() > 0)
+        {
+            if (!_channel.WriteAble())
+                _channel.EnableWrite();
+        }
+        if (_out_buffer.GetReadableNum() == 0)
+            Release();
+    }   
+
+    void EnableInactiveReleaseInLoop()
+    {
+        _enable_inactive_release = true;
+        if (_loop->HasTimer(_timer_id))
+            _loop->RefreshTimerTask(_timer_id);
+        else
+            _loop->AddTimerTask(_timer_id, std::bind(&Connection::Release, this));
+    }  
+    
+    void CancelInactiveReleaseInLoop()
+    {
+        _enable_inactive_release = false;
+        if (_loop->HasTimer(_timer_id))
+            _loop->CancelTimerTask(_timer_id);
     }
 
 public:
